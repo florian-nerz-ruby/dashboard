@@ -1,0 +1,26 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# BigQuery service account key - never commit regardless of where it lands
+bq-*.json
+
+# Python tooling and build artefacts
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Runtime files
+*.log

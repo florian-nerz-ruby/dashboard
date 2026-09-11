@@ -1,0 +1,105 @@
+# systemd unit for Apache Superset (Green Option dashboard), served at
+# dashboard.diggies.dev. Mirrors the diggies-api / morning-shift units on
+# this host: native venv + gunicorn, not Docker.
+#
+# Install (one-time):
+#   sudo useradd --system --user-group --home-dir /nonexistent \
+#     --shell /usr/sbin/nologin superset
+#   sudo mkdir -p /opt/superset /etc/superset
+#   sudo chown root:superset /etc/superset && sudo chmod 750 /etc/superset
+#   # deploy the app + superset_config.py to /opt/superset, then:
+#   cd /opt/superset && python3 -m venv .venv
+#   ./.venv/bin/pip install "apache-superset==6.1.*" sqlalchemy-bigquery \
+#     psycopg2-binary redis
+#   # copy .env.example -> /etc/superset/superset.env, fill in CHANGE_ME
+#   # values, chown root:superset + chmod 640 it, then:
+#   sudo cp deployment/systemd/superset.service /etc/systemd/system/superset.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now superset
+#
+# Redeploy:
+#   cd /opt/superset && git pull && ./.venv/bin/pip install -r requirements.txt
+#   ./.venv/bin/superset db upgrade
+#   sudo systemctl restart superset
+#
+# Logs:
+#   journalctl -u superset -f
+#
+# Gotchas specific to this app (do not "simplify" these away):
+#   - worker-class is gthread, never gevent: the BigQuery Python SDK's gRPC
+#     transport deadlocks/segfaults under gevent's monkey-patching.
+#   - no --preload: each worker must build its own Postgres/Redis/BigQuery
+#     client state after forking, not inherit one shared pre-fork instance
+#     (same reasoning as morning-shift's ExecStart comment, for the same
+#     class of bug).
+
+[Unit]
+Description=Apache Superset (Green Option dashboard)
+Documentation=https://superset.apache.org/docs/intro
+Wants=network-online.target postgresql.service
+After=network-online.target postgresql.service redis-server.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+User=superset
+Group=superset
+WorkingDirectory=/opt/superset
+# Root-owned, group-readable file supplying every application setting -
+# see .env.example. In particular SUPERSET_DATABASE_URI must point at the
+# native PostgreSQL server on 127.0.0.1, and GOOGLE_APPLICATION_CREDENTIALS
+# at the mounted BigQuery service-account key.
+EnvironmentFile=/etc/superset/superset.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=SUPERSET_CONFIG_PATH=/opt/superset/superset_config.py
+
+# Nginx is the only intended client. Bind to loopback; 8088 must never be
+# reachable directly from outside this host.
+ExecStart=/opt/superset/.venv/bin/gunicorn \
+    --bind 127.0.0.1:8088 \
+    --workers 4 \
+    --worker-class gthread \
+    --threads 4 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    --capture-output \
+    "superset.app:create_app()"
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+UMask=0077
+
+# Hardening - matches the diggies-api / morning-shift units on this host.
+# Drop individual directives only if they fight with something specific,
+# not as a blanket relaxation.
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# ProtectSystem=strict makes / read-only for this service; Superset needs
+# nowhere writable at runtime (uploads/temp go through PrivateTmp), but if a
+# future feature needs a writable data dir, add it explicitly here rather
+# than loosening ProtectSystem, e.g.:
+#   ReadWritePaths=/opt/superset/var
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+# Hotel property codes that get a PROP_<code> role, an RLS filter, and a
+# Base-filter exemption from scripts/setup_rbac.py.
+#
+# Seeded from diggies-api's IHG_PROPERTY_CODES (.env.example) - the closest
+# thing to a canonical property-code list found anywhere in this org's
+# repos, and the same codes voucher_issued events already carry as
+# property_code. Confirm this is actually the right set before relying on
+# it: it's diggies-api's full IHG-connected portfolio, which may not be
+# identical to "every property with Green Option enabled" - drop any that
+# don't apply, or add ones that are missing.
+properties:
+  - AMSEM
+  - CGNEL
+  - DUBMO
+  - DUSCO
+  - DUSLN
+  - DUSLU
+  - FLRBE
+  - FRALU
+  - GVACL
+  - HAMLO
+  - LONLC
+  - LONSE
+  - LONZO
+  - MUCLI
+  - MUCRO
+  - STOFR
+  - STRHN
+  - VIELI
+  - VIEMA
+  - VIESO
+  - ZRHMI
