@@ -66,8 +66,15 @@ cd /opt/superset
 python3 -m venv .venv
 # gunicorn (with its gthread worker class) is a declared dependency of
 # apache-superset itself - nothing extra to install for that part.
-./.venv/bin/pip install "apache-superset==6.1.*" sqlalchemy-bigquery \
-  psycopg2-binary redis
+#
+# Flask-Caching<2.5.0 is pinned deliberately: 2.5.0 (released 2026-08-24,
+# after Superset 6.1.0 shipped) broke Superset's cache backend init -
+# TypeError: ...got an unexpected keyword argument 'timeout' (or
+# 'ignore_delete_many_errors') when running `superset db upgrade`/`init`.
+# Open upstream as apache/superset#43860 - drop this pin once that's fixed
+# and a newer Superset patch release picks it up.
+./.venv/bin/pip install "apache-superset==6.1.*" "Flask-Caching<2.5.0" \
+  sqlalchemy-bigquery psycopg2-binary redis
 
 sudo cp .env.example /etc/superset/superset.env
 sudo chown root:superset /etc/superset/superset.env
@@ -85,8 +92,7 @@ for the exact setup, including scoping it to `reporting` only via an
 authorized view rather than granting it direct access to raw event data.
 
 ```bash
-export SUPERSET_CONFIG_PATH=/opt/superset/superset_config.py
-set -a; source /etc/superset/superset.env; set +a
+source deployment/activate-env.sh   # re-run this after opening any new shell - it doesn't persist
 
 ./.venv/bin/superset db upgrade
 ./.venv/bin/superset fab create-admin   # first admin account, interactive
