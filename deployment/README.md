@@ -80,8 +80,19 @@ python3 -m venv .venv
 # 'ignore_delete_many_errors') when running `superset db upgrade`/`init`.
 # Open upstream as apache/superset#43860 - drop this pin once that's fixed
 # and a newer Superset patch release picks it up.
+#
+# rich and cachetools: both genuinely required - Superset's CLI (rich) and
+# db_engine_specs/aws_iam.py, imported eagerly while cataloging every
+# available database engine (cachetools) - but neither is pulled in by a
+# bare `pip install apache-superset`. Confirmed live: `rich`'s absence broke
+# every `superset` CLI invocation; `cachetools`'s absence 500'd every page
+# (common_bootstrap_payload -> get_available_engine_specs runs on every
+# request, not just ones using AWS IAM auth). If a *third* distinct
+# ModuleNotFoundError turns up, stop adding packages one at a time here and
+# install from Superset's pinned requirements/base.txt instead - evidently
+# more complete than what setup.py alone declares.
 ./.venv/bin/pip install "apache-superset==6.1.*" "Flask-Caching<2.5.0" \
-  sqlalchemy-bigquery psycopg2-binary redis
+  rich cachetools sqlalchemy-bigquery psycopg2-binary redis
 
 sudo cp .env.example /etc/superset/superset.env
 sudo chown root:superset /etc/superset/superset.env
