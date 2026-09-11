@@ -80,7 +80,9 @@ Place the BigQuery service-account key at the path
 by default), owned `root:superset`, mode `640`. It must be a **read-only**
 service account scoped only to the reporting datasets/views this dashboard
 needs - create it as its own dedicated account, not a reuse of a
-broader-scoped one.
+broader-scoped one. See [bigquery-service-account.md](bigquery-service-account.md)
+for the exact setup, including scoping it to `reporting` only via an
+authorized view rather than granting it direct access to raw event data.
 
 ```bash
 export SUPERSET_CONFIG_PATH=/opt/superset/superset_config.py
