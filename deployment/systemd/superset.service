@@ -56,12 +56,22 @@ Environment=SUPERSET_CONFIG_PATH=/opt/superset/superset_config.py
 
 # Nginx is the only intended client. Bind to loopback; 8088 must never be
 # reachable directly from outside this host.
+#
+# --no-control-socket: gunicorn 25+ creates a control socket by default at
+# $XDG_RUNTIME_DIR/gunicorn.ctl, falling back to $HOME/.gunicorn/gunicorn.ctl
+# when XDG_RUNTIME_DIR is unset (true here - no PAM session for this
+# system service). Since this user's home is deliberately /nonexistent (see
+# the useradd command above), that fallback path can't be created and
+# gunicorn crash-loops on boot. Nothing here uses the control socket
+# (gunicornc), so disable it outright rather than giving /nonexistent a
+# real, writable home directory just to satisfy it.
 ExecStart=/opt/superset/.venv/bin/gunicorn \
     --bind 127.0.0.1:8088 \
     --workers 4 \
     --worker-class gthread \
     --threads 4 \
     --timeout 120 \
+    --no-control-socket \
     --access-logfile - \
     --error-logfile - \
     --capture-output \
