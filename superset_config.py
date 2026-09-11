@@ -85,6 +85,47 @@ PUBLIC_ROLE_LIKE = None
 FAB_ADD_SECURITY_API = True
 
 # ---------------------------------------------------------------------------
+# Color schemes - the brief's design palette (see deployment/README.md
+# section 8), selectable in any chart's Customize tab > Color Scheme
+# dropdown. A scheme's colors apply in order to however many series a chart
+# has: "greenOption" is meant for multi-series charts (its order matches
+# Redeemed/Open/Expired exactly, so a 3-series chart lands them correctly
+# without manual reassignment). The two single-color schemes exist because
+# a single-metric chart always takes whichever color is *first* in a
+# scheme - there's no per-series picker for those - so a standalone chart
+# needing a specific non-first color (e.g. amber, not green) picks the
+# dedicated single-color scheme instead of fighting list order.
+# ---------------------------------------------------------------------------
+EXTRA_CATEGORICAL_COLOR_SCHEMES = [
+    {
+        "id": "greenOption",
+        "label": "Green Option",
+        "description": "Full palette, ordered Redeemed/Open/Expired/... - for multi-series charts.",
+        "colors": [
+            "#2E7D32",  # Redeemed / positive
+            "#B7791F",  # Open / pending
+            "#D9D9D4",  # Expired
+            "#1F5A24",  # Dark green
+            "#C53434",  # Negative trend
+            "#656560",  # Secondary text
+            "#8A8A84",  # Muted text
+        ],
+    },
+    {
+        "id": "greenOptionRedeemed",
+        "label": "Green Option — Redeemed (green)",
+        "description": "For a standalone single-metric chart that should always be green.",
+        "colors": ["#2E7D32"],
+    },
+    {
+        "id": "greenOptionOpen",
+        "label": "Green Option — Open (amber)",
+        "description": "For a standalone single-metric chart that should always be amber.",
+        "colors": ["#B7791F"],
+    },
+]
+
+# ---------------------------------------------------------------------------
 # Feature flags - keep this list intentional; every flag here is a decision
 # made for this deployment, not a default left switched on.
 # ---------------------------------------------------------------------------
