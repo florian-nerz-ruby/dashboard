@@ -16,6 +16,14 @@ import os
 # ---------------------------------------------------------------------------
 SECRET_KEY = os.environ["SUPERSET_SECRET_KEY"]
 
+# Superset unconditionally creates this at boot (pre_init() calls
+# os.makedirs(DATA_DIR) before anything else runs), so it has to be a real,
+# writable path - it defaults to something under $HOME, which is /nonexistent
+# for the superset service user (see systemd/superset.service) and also
+# outside ProtectSystem=strict's allowlist either way. See
+# deployment/README.md for the matching ReadWritePaths= / mkdir step.
+DATA_DIR = "/var/lib/superset"
+
 # Metadata only - dashboards, users, roles, RLS rules, chart definitions.
 # BigQuery holds every row of actual reporting data; that connection is
 # configured separately, through the Superset UI, using the dedicated

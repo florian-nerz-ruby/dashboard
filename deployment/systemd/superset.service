@@ -53,18 +53,23 @@ EnvironmentFile=/etc/superset/superset.env
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=SUPERSET_CONFIG_PATH=/opt/superset/superset_config.py
+# Overrides the useradd'd /nonexistent home for this process only. Superset
+# unconditionally creates DATA_DIR (superset_config.py) at boot and some
+# dependencies stash cache files under $HOME too - /nonexistent broke both
+# in practice (confirmed live: gunicorn's control socket, then Superset's
+# own pre_init() makedirs). Real, writable, and covered by ReadWritePaths=
+# below - see deployment/README.md for the matching mkdir/chown.
+Environment=HOME=/var/lib/superset
 
 # Nginx is the only intended client. Bind to loopback; 8088 must never be
 # reachable directly from outside this host.
 #
 # --no-control-socket: gunicorn 25+ creates a control socket by default at
 # $XDG_RUNTIME_DIR/gunicorn.ctl, falling back to $HOME/.gunicorn/gunicorn.ctl
-# when XDG_RUNTIME_DIR is unset (true here - no PAM session for this
-# system service). Since this user's home is deliberately /nonexistent (see
-# the useradd command above), that fallback path can't be created and
-# gunicorn crash-loops on boot. Nothing here uses the control socket
-# (gunicornc), so disable it outright rather than giving /nonexistent a
-# real, writable home directory just to satisfy it.
+# when XDG_RUNTIME_DIR is unset (true here - no PAM session for this system
+# service). HOME is now a real writable dir (see Environment=HOME= above),
+# so this would probably work either way at this point - left disabled
+# anyway since nothing here uses gunicornc, and one less moving part.
 ExecStart=/opt/superset/.venv/bin/gunicorn \
     --bind 127.0.0.1:8088 \
     --workers 4 \
@@ -105,11 +110,11 @@ RestrictNamespaces=true
 LockPersonality=true
 SystemCallArchitectures=native
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-# ProtectSystem=strict makes / read-only for this service; Superset needs
-# nowhere writable at runtime (uploads/temp go through PrivateTmp), but if a
-# future feature needs a writable data dir, add it explicitly here rather
-# than loosening ProtectSystem, e.g.:
-#   ReadWritePaths=/opt/superset/var
+# ProtectSystem=strict makes / read-only for this service by default;
+# DATA_DIR (superset_config.py) and HOME (above) both point at this, so it
+# needs to be explicitly allowlisted rather than left to PrivateTmp - actual
+# persistent state, not scratch space.
+ReadWritePaths=/var/lib/superset
 
 [Install]
 WantedBy=multi-user.target

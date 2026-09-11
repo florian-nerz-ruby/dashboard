@@ -19,10 +19,17 @@ Redis is not yet used by anything here - it's a new, small addition.
 ```bash
 sudo useradd --system --user-group --home-dir /nonexistent \
   --shell /usr/sbin/nologin superset
-sudo mkdir -p /opt/superset /etc/superset
+sudo mkdir -p /opt/superset /etc/superset /var/lib/superset
 sudo chown root:superset /etc/superset
 sudo chmod 750 /etc/superset
+sudo chown superset:superset /var/lib/superset
+sudo chmod 750 /var/lib/superset
 ```
+
+`/var/lib/superset` is Superset's `DATA_DIR` (see `superset_config.py`) - it
+creates this unconditionally at boot regardless of the `/nonexistent` home
+dir above, so it needs to exist and be writable before the first `superset
+db upgrade` in step 4, not just before the systemd service in step 5.
 
 ## 2. PostgreSQL - dedicated database and role
 
